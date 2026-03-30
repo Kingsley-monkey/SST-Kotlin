@@ -1,0 +1,202 @@
+package com.example.pretzelpopper
+
+import android.graphics.Color
+import android.os.Bundle
+import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
+import androidx.core.content.ContextCompat
+import com.example.pretzelpopper.viewmodel.PretzelViewModel
+import java.text.DecimalFormat
+
+class UpgradeActivity : AppCompatActivity() {
+    
+    private lateinit var viewModel: PretzelViewModel
+    private lateinit var pretzelCountText: TextView
+    private lateinit var upgradesContainer: LinearLayout
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        viewModel = ViewModelProvider(this)[PretzelViewModel::class.java]
+        
+        setupUI()
+        observeViewModel()
+    }
+    
+    private fun setupUI() {
+        val mainLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(30, 40, 30, 40)
+            setBackgroundColor(ContextCompat.getColor(this@UpgradeActivity, R.color.background_color))
+        }
+        
+        // Header with back button
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setPadding(0, 0, 0, 30)
+        }
+        
+        val backButton = Button(this).apply {
+            text = "← BACK"
+            textSize = 14f
+            setBackgroundColor(Color.TRANSPARENT)
+            setTextColor(ContextCompat.getColor(this@UpgradeActivity, R.color.pretzel_gold))
+            setOnClickListener { finish() }
+        }
+        
+        val title = TextView(this).apply {
+            text = "🛒 UPGRADES"
+            textSize = 24f
+            textAlignment = TextView.TEXT_ALIGNMENT_CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+            setTextColor(ContextCompat.getColor(this@UpgradeActivity, R.color.pretzel_gold))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+        
+        val placeholder = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(80, LinearLayout.LayoutParams.WRAP_CONTENT)
+        }
+        
+        header.addView(backButton)
+        header.addView(title)
+        header.addView(placeholder)
+        
+        // Pretzel count card
+        val countCard = createCard()
+        pretzelCountText = TextView(this).apply {
+            text = "0"
+            textSize = 32f
+            textAlignment = TextView.TEXT_ALIGNMENT_CENTER
+            setTextColor(ContextCompat.getColor(this@UpgradeActivity, R.color.pretzel_brown))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+        
+        val pretzelLabel = TextView(this).apply {
+            text = "Pretzels Available"
+            textSize = 14f
+            textAlignment = TextView.TEXT_ALIGNMENT_CENTER
+        }
+        
+        countCard.addView(pretzelCountText)
+        countCard.addView(pretzelLabel)
+        
+        // Upgrades container
+        upgradesContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        
+        mainLayout.addView(header)
+        mainLayout.addView(countCard)
+        mainLayout.addView(upgradesContainer)
+        
+        setContentView(mainLayout)
+    }
+    
+    private fun createCard(): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, 0, 0, 20)
+            }
+            setPadding(20, 15, 20, 15)
+            setBackgroundColor(ContextCompat.getColor(this@UpgradeActivity, R.color.card_background))
+            setElevation(4f)
+        }
+    }
+    
+    private fun observeViewModel() {
+        viewModel.pretzels.observe(this) { pretzels ->
+            pretzelCountText.text = DecimalFormat("#,##0").format(pretzels.toInt())
+        }
+        
+        viewModel.upgrades.observe(this) { upgrades ->
+            updateUpgradesList(upgrades)
+        }
+    }
+    
+    private fun updateUpgradesList(upgrades: List<com.example.pretzelpopper.viewmodel.Upgrade>) {
+        upgradesContainer.removeAllViews()
+        
+        upgrades.forEach { upgrade ->
+            val upgradeCard = createCard()
+            
+            val nameText = TextView(this).apply {
+                text = "${upgrade.name} (x${upgrade.quantity})"
+                textSize = 18f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(ContextCompat.getColor(this@UpgradeActivity, R.color.pretzel_brown))
+            }
+            
+            val descText = TextView(this).apply {
+                text = upgrade.description
+                textSize = 12f
+                setPadding(0, 5, 0, 10)
+                setTextColor(ContextCompat.getColor(this@UpgradeActivity, R.color.text_secondary))
+            }
+            
+            val statsRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, 10, 0, 10)
+            }
+            
+            val productionText = TextView(this).apply {
+                text = "📈 +${upgrade.pretzelsPerSecond}/sec"
+                textSize = 14f
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+                setTextColor(ContextCompat.getColor(this@UpgradeActivity, R.color.pretzel_gold))
+            }
+            
+            val cost = viewModel.getNextUpgradeCost(upgrade.id)
+            val costText = TextView(this).apply {
+                text = "💰 $cost"
+                textSize = 14f
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+                setTextColor(ContextCompat.getColor(this@UpgradeActivity, R.color.text_secondary))
+            }
+            
+            statsRow.addView(productionText)
+            statsRow.addView(costText)
+            
+            val buyButton = Button(this).apply {
+                text = "BUY"
+                textSize = 14f
+                setBackgroundColor(ContextCompat.getColor(this@UpgradeActivity, R.color.upgrade_button))
+                setTextColor(Color.WHITE)
+                setOnClickListener {
+                    viewModel.purchaseUpgrade(upgrade.id)
+                }
+            }
+            
+            upgradeCard.addView(nameText)
+            upgradeCard.addView(descText)
+            upgradeCard.addView(statsRow)
+            upgradeCard.addView(buyButton)
+            
+            upgradesContainer.addView(upgradeCard)
+        }
+    }
+}

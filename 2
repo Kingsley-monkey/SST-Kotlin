@@ -1,0 +1,80 @@
+package com.example.pretzelpopper.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+
+data class Upgrade(
+    val id: Int,
+    val name: String,
+    val description: String,
+    val baseCost: Int,
+    val pretzelsPerSecond: Double,
+    var quantity: Int = 0
+)
+
+class PretzelViewModel : ViewModel() {
+    
+    private val _pretzels = MutableStateFlow(0.0)
+    val pretzels: StateFlow<Double> = _pretzels
+    
+    private val _pretzelsPerSecond = MutableStateFlow(0.0)
+    val pretzelsPerSecond: StateFlow<Double> = _pretzelsPerSecond
+    
+    private val _upgrades = MutableStateFlow(listOf(
+        Upgrade(1, "Salt Shaker", "Adds extra salt for more pretzels", 10, 0.5),
+        Upgrade(2, "Pretzel Oven", "Bakes pretzels automatically", 50, 2.0),
+        Upgrade(3, "Pretzel Factory", "Mass produces pretzels", 200, 8.0),
+        Upgrade(4, "Pretzel Empire", "Dominates pretzel market", 1000, 30.0)
+    ))
+    val upgrades: StateFlow<List<Upgrade>> = _upgrades
+    
+    init {
+        startAutoGeneration()
+    }
+    
+    fun clickPretzel() {
+        _pretzels.value += 1.0
+    }
+    
+    fun purchaseUpgrade(upgradeId: Int) {
+        val upgradesList = _upgrades.value.toMutableList()
+        val upgrade = upgradesList.find { it.id == upgradeId } ?: return
+        
+        val cost = calculateUpgradeCost(upgrade)
+        
+        if (_pretzels.value >= cost) {
+            _pretzels.value -= cost
+            val index = upgradesList.indexOf(upgrade)
+            upgradesList[index] = upgrade.copy(quantity = upgrade.quantity + 1)
+            _upgrades.value = upgradesList
+            updatePretzelsPerSecond()
+        }
+    }
+    
+    private fun calculateUpgradeCost(upgrade: Upgrade): Int {
+        // Cost increases with quantity
+        return (upgrade.baseCost * (1 + upgrade.quantity * 0.5)).toInt()
+    }
+    
+    private fun updatePretzelsPerSecond() {
+        val totalPerSecond = _upgrades.value.sumOf { it.pretzelsPerSecond * it.quantity }
+        _pretzelsPerSecond.value = totalPerSecond
+    }
+    
+    private fun startAutoGeneration() {
+        viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(1000)
+                _pretzels.value += _pretzelsPerSecond.value
+            }
+        }
+    }
+    
+    fun getNextUpgradeCost(upgradeId: Int): Int {
+        val upgrade = _upgrades.value.find { it.id == upgradeId } ?: return 0
+        return calculateUpgradeCost(upgrade)
+    }
+}

@@ -1,0 +1,193 @@
+package com.example.pretzelpopper
+
+import android.content.Intent
+import android.graphics.Color
+import android.os.Bundle
+import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
+import androidx.core.content.ContextCompat
+import com.example.pretzelpopper.viewmodel.PretzelViewModel
+import java.text.DecimalFormat
+
+class MainActivity : AppCompatActivity() {
+    
+    private lateinit var viewModel: PretzelViewModel
+    private lateinit var pretzelCountText: TextView
+    private lateinit var pretzelsPerSecondText: TextView
+    private lateinit var pretzelButton: ImageButton
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        viewModel = ViewModelProvider(this)[PretzelViewModel::class.java]
+        
+        setupUI()
+        observeViewModel()
+    }
+    
+    private fun setupUI() {
+        val mainLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 60, 40, 40)
+            setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.background_color))
+        }
+        
+        // Title
+        val title = TextView(this).apply {
+            text = "🥨 PRETZEL POPPER 🥨"
+            textSize = 28f
+            textAlignment = TextView.TEXT_ALIGNMENT_CENTER
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.pretzel_gold))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(0, 0, 0, 30)
+        }
+        
+        // Pretzel Counter Card
+        val counterCard = createCard()
+        pretzelCountText = TextView(this).apply {
+            text = "0"
+            textSize = 48f
+            textAlignment = TextView.TEXT_ALIGNMENT_CENTER
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.pretzel_brown))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+        
+        val pretzelLabel = TextView(this).apply {
+            text = "Pretzels"
+            textSize = 18f
+            textAlignment = TextView.TEXT_ALIGNMENT_CENTER
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
+        }
+        
+        counterCard.addView(pretzelCountText)
+        counterCard.addView(pretzelLabel)
+        
+        // Pretzel Button
+        pretzelButton = ImageButton(this).apply {
+            setImageResource(R.drawable.pretzel_icon)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                dpToPx(200),
+                dpToPx(200)
+            ).apply {
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+                setMargins(0, 20, 0, 20)
+            }
+            setBackgroundColor(Color.TRANSPARENT)
+            setOnClickListener {
+                viewModel.clickPretzel()
+                animatePretzel()
+            }
+        }
+        
+        // Stats Card
+        val statsCard = createCard()
+        pretzelsPerSecondText = TextView(this).apply {
+            text = "0.0 pretzels/sec"
+            textSize = 16f
+            textAlignment = TextView.TEXT_ALIGNMENT_CENTER
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
+        }
+        statsCard.addView(pretzelsPerSecondText)
+        
+        // Button Row
+        val buttonRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, 30, 0, 0)
+            }
+        }
+        
+        val upgradesButton = Button(this).apply {
+            text = "🛒 UPGRADES"
+            textSize = 16f
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply {
+                setMargins(0, 0, 10, 0)
+            }
+            setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.upgrade_button))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                startActivity(Intent(this@MainActivity, UpgradeActivity::class.java))
+            }
+        }
+        
+        val creditButton = Button(this).apply {
+            text = "👥 CREDITS"
+            textSize = 16f
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+            setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.credit_button))
+            setTextColor(Color.WHITE)
+            setOnClickListener {
+                startActivity(Intent(this@MainActivity, CreditActivity::class.java))
+            }
+        }
+        
+        buttonRow.addView(upgradesButton)
+        buttonRow.addView(creditButton)
+        
+        // Add all to main layout
+        mainLayout.addView(title)
+        mainLayout.addView(counterCard)
+        mainLayout.addView(pretzelButton)
+        mainLayout.addView(statsCard)
+        mainLayout.addView(buttonRow)
+        
+        setContentView(mainLayout)
+    }
+    
+    private fun createCard(): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, 0, 0, 20)
+            }
+            setPadding(30, 20, 30, 20)
+            setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.card_background))
+            setElevation(8f)
+        }
+    }
+    
+    private fun observeViewModel() {
+        viewModel.pretzels.observe(this) { pretzels ->
+            pretzelCountText.text = DecimalFormat("#,##0").format(pretzels.toInt())
+        }
+        
+        viewModel.pretzelsPerSecond.observe(this) { perSecond ->
+            pretzelsPerSecondText.text = "${DecimalFormat("#,##0.0").format(perSecond)} pretzels/sec"
+        }
+    }
+    
+    private fun animatePretzel() {
+        pretzelButton.animate()
+            .scaleX(0.9f)
+            .scaleY(0.9f)
+            .setDuration(100)
+            .withEndAction {
+                pretzelButton.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(100)
+                    .start()
+            }
+            .start()
+    }
+    
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density).toInt()
+    }
+}
